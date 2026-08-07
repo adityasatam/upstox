@@ -1,13 +1,13 @@
+##############################################################
+# INSTALL REQUIRED PACKAGES
+##############################################################
+
 import sys
 import subprocess
 import tempfile
 import requests
 
-# ==========================================================
-# INSTALL REQUIREMENTS
-# ==========================================================
-
-REQUIREMENTS_URL = (
+requirements_url = (
     "https://raw.githubusercontent.com/"
     "adityasatam/upstox/"
     "refs/heads/main/requirements.txt"
@@ -16,9 +16,10 @@ REQUIREMENTS_URL = (
 try:
 
     response = requests.get(
-        REQUIREMENTS_URL,
+        requirements_url,
         timeout=30
     )
+
     response.raise_for_status()
 
     with tempfile.NamedTemporaryFile(
@@ -28,6 +29,7 @@ try:
     ) as f:
 
         f.write(response.text)
+
         temp_requirements = f.name
 
     subprocess.check_call([
@@ -41,61 +43,62 @@ try:
 
 except Exception as e:
 
-    print(f"Failed to install requirements:\n{e}")
+    print(f"Failed to install requirements : {e}")
+
     sys.exit(1)
 
-# ==========================================================
-# USER INSTRUCTIONS
-# ==========================================================
 
-# 1. Download all Upstox Historical Data (.xlsx) files.
+##############################################################
+# HOW TO USE
+##############################################################
+
+# 1. Download all historical Upstox (.xlsx) files.
 #
-# 2. Keep all files in one folder.
+# 2. Keep all files inside ONE folder.
 #
-# 3. Modify only the folder_path below.
+# 3. Create first_buy_date.txt inside the same folder.
 #
-# 4. Run:
+#    Example:
+#
+#    ADANIENT|11-07-2024
+#    RELIANCE|20-01-2022
+#    TCS|15-03-2020
+#
+# 4. Copy this run.py anywhere.
+#
+# 5. Change ONLY the folder_path below.
+#
+# 6. Run:
 #
 #       python run.py
+#
+##############################################################
 
-# ==========================================================
-# DOWNLOAD MAIN.PY
-# ==========================================================
 
-MAIN_URL = (
+##############################################################
+# DOWNLOAD & EXECUTE main.py FROM GITHUB
+##############################################################
+
+main_url = (
     "https://raw.githubusercontent.com/"
     "adityasatam/upstox/"
     "refs/heads/main/main.py"
 )
 
-try:
+response = requests.get(main_url)
 
-    response = requests.get(
-        MAIN_URL,
-        timeout=30
+if response.status_code == 200:
+
+    exec(response.text)
+
+    main(
+
+        folder_path=r"C:\Users\sasuk\upstox\upstox_files",
+
+        buy_date_file="first_buy_date.txt"
+
     )
 
-    response.raise_for_status()
+else:
 
-except Exception as e:
-
-    print(f"Failed to download main.py:\n{e}")
-    sys.exit(1)
-
-# ==========================================================
-# EXECUTE MAIN.PY
-# ==========================================================
-
-namespace = {}
-
-exec(response.text, namespace)
-
-# ==========================================================
-# RUN PROGRAM
-# ==========================================================
-
-namespace["main"](
-
-    folder_path=r"C:\Users\sasuk\upstox\upstox_files"
-
-)
+    print("Failed to download main.py from GitHub.")
