@@ -9,7 +9,7 @@ import requests
 
 requirements_url = (
     "https://raw.githubusercontent.com/"
-    "adityasatam/upstox_stock_summary/"
+    "adityasatam/upstox/"
     "refs/heads/main/requirements.txt"
 )
 
