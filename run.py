@@ -7,7 +7,7 @@ import requests
 # INSTALL REQUIREMENTS
 # ==========================================================
 
-requirements_url = (
+REQUIREMENTS_URL = (
     "https://raw.githubusercontent.com/"
     "adityasatam/upstox/"
     "refs/heads/main/requirements.txt"
@@ -16,10 +16,9 @@ requirements_url = (
 try:
 
     response = requests.get(
-        requirements_url,
+        REQUIREMENTS_URL,
         timeout=30
     )
-
     response.raise_for_status()
 
     with tempfile.NamedTemporaryFile(
@@ -29,69 +28,74 @@ try:
     ) as f:
 
         f.write(response.text)
-
         temp_requirements = f.name
 
     subprocess.check_call([
-
         sys.executable,
-
         "-m",
-
         "pip",
-
         "install",
-
         "-r",
-
         temp_requirements
-
     ])
 
 except Exception as e:
 
-    print(f"Failed to install requirements: {e}")
-
+    print(f"Failed to install requirements:\n{e}")
     sys.exit(1)
 
 # ==========================================================
-# USAGE
+# USER INSTRUCTIONS
 # ==========================================================
 
-# 1) Download all Upstox historical .xlsx files.
+# 1. Download all Upstox Historical Data (.xlsx) files.
 #
-# 2) Keep all .xlsx files inside one folder.
+# 2. Keep all files in one folder.
 #
-# 3) Copy this run.py into any folder.
+# 3. Modify only the folder_path below.
 #
-# 4) Modify only the folder_path parameter below.
+# 4. Run:
 #
-# 5) Run:
-#
-#    python run.py
+#       python run.py
 
 # ==========================================================
-# DOWNLOAD & EXECUTE MAIN
+# DOWNLOAD MAIN.PY
 # ==========================================================
 
-main_url = (
+MAIN_URL = (
     "https://raw.githubusercontent.com/"
     "adityasatam/upstox/"
     "refs/heads/main/main.py"
 )
 
-response = requests.get(main_url)
+try:
 
-if response.status_code == 200:
-
-    exec(response.text)
-
-    main(
-
-        folder_path=r"C:\Users\sasuk\upstox\upstox_files"
-
+    response = requests.get(
+        MAIN_URL,
+        timeout=30
     )
 
-else:
+    response.raise_for_status()
 
-    print("Failed to download main.py from GitHub.")
+except Exception as e:
+
+    print(f"Failed to download main.py:\n{e}")
+    sys.exit(1)
+
+# ==========================================================
+# EXECUTE MAIN.PY
+# ==========================================================
+
+namespace = {}
+
+exec(response.text, namespace)
+
+# ==========================================================
+# RUN PROGRAM
+# ==========================================================
+
+namespace["main"](
+
+    folder_path=r"C:\Users\sasuk\upstox\upstox_files"
+
+)
