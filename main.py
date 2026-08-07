@@ -1,5 +1,5 @@
 ##############################################################
-# INPUT:
+# INPUT: 
 # Folder containing Upstox Historical OHLC (.xlsx) files
 # first_buy_date.txt
 #
