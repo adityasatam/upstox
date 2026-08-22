@@ -1,4 +1,3 @@
-````markdown
 # upstox_sell_alert
 
 Analyzes multiple **Upstox Historical OHLC `.xlsx` files** and identifies the maximum High price since the first buy date.
