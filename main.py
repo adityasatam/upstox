@@ -23,6 +23,7 @@
 # 08-08-2026 Initial Version
 # 08-08-2026 Added First Buy Date Report
 # 22-08-2026 Fixed date parsing warnings
+# 22-08-2026 Added robust Upstox date handling
 ##############################################################
 
 
@@ -141,12 +142,140 @@ def read_stock_file(
     file_path
 ):
 
-    df = pd.read_excel(
+    return pd.read_excel(
         file_path,
         engine="openpyxl"
     )
 
-    return df
+
+# ==========================================================
+# PARSE UPSTOX DATE
+# ==========================================================
+
+def parse_upstox_dates(
+    series
+):
+
+    # ------------------------------------------------------
+    # Case 1:
+    # Already datetime
+    # ------------------------------------------------------
+
+    if pd.api.types.is_datetime64_any_dtype(
+        series
+    ):
+
+        return series
+
+    # ------------------------------------------------------
+    # Case 2:
+    # Numeric Excel serial dates
+    # ------------------------------------------------------
+
+    if pd.api.types.is_numeric_dtype(
+        series
+    ):
+
+        return pd.to_datetime(
+            series,
+            unit="D",
+            origin="1899-12-30",
+            errors="coerce"
+        )
+
+    # ------------------------------------------------------
+    # Case 3:
+    # String dates
+    #
+    # Try known formats explicitly.
+    # This avoids Pandas format inference warnings.
+    # ------------------------------------------------------
+
+    result = pd.Series(
+        pd.NaT,
+        index=series.index,
+        dtype="datetime64[ns]"
+    )
+
+    date_strings = (
+        series
+        .astype(str)
+        .str.strip()
+    )
+
+    # ------------------------------------------------------
+    # DD-MM-YYYY
+    # ------------------------------------------------------
+
+    mask = result.isna()
+
+    result.loc[mask] = pd.to_datetime(
+        date_strings.loc[mask],
+        format="%d-%m-%Y",
+        errors="coerce"
+    )
+
+    # ------------------------------------------------------
+    # DD/MM/YYYY
+    # ------------------------------------------------------
+
+    mask = result.isna()
+
+    result.loc[mask] = pd.to_datetime(
+        date_strings.loc[mask],
+        format="%d/%m/%Y",
+        errors="coerce"
+    )
+
+    # ------------------------------------------------------
+    # YYYY-MM-DD
+    # ------------------------------------------------------
+
+    mask = result.isna()
+
+    result.loc[mask] = pd.to_datetime(
+        date_strings.loc[mask],
+        format="%Y-%m-%d",
+        errors="coerce"
+    )
+
+    # ------------------------------------------------------
+    # YYYY-MM-DD HH:MM:SS
+    # ------------------------------------------------------
+
+    mask = result.isna()
+
+    result.loc[mask] = pd.to_datetime(
+        date_strings.loc[mask],
+        format="%Y-%m-%d %H:%M:%S",
+        errors="coerce"
+    )
+
+    # ------------------------------------------------------
+    # DD-MM-YYYY HH:MM:SS
+    # ------------------------------------------------------
+
+    mask = result.isna()
+
+    result.loc[mask] = pd.to_datetime(
+        date_strings.loc[mask],
+        format="%d-%m-%Y %H:%M:%S",
+        errors="coerce"
+    )
+
+    # ------------------------------------------------------
+    # DD/MM/YYYY HH:MM:SS
+    # ------------------------------------------------------
+
+    mask = result.isna()
+
+    result.loc[mask] = pd.to_datetime(
+        date_strings.loc[mask],
+        format="%d/%m/%Y %H:%M:%S",
+        errors="coerce"
+    )
+
+    return result
 
 
 # ==========================================================
@@ -171,18 +300,8 @@ def clean_dataframe(
 
     date_column = df.columns[0]
 
-    # Upstox files can contain Excel datetime values,
-    # DD-MM-YYYY strings, DD/MM/YYYY strings, etc.
-    #
-    # format="mixed" prevents Pandas from trying to infer
-    # one format for the complete column and avoids the
-    # "Could not infer format" warning.
-
-    df[date_column] = pd.to_datetime(
-        df[date_column],
-        format="mixed",
-        dayfirst=True,
-        errors="coerce"
+    df[date_column] = parse_upstox_dates(
+        df[date_column]
     )
 
     # ------------------------------------------------------
@@ -210,7 +329,7 @@ def clean_dataframe(
         )
 
     # ------------------------------------------------------
-    # Remove Rows With Invalid Dates
+    # Remove Invalid Date Rows
     # ------------------------------------------------------
 
     df = df[
@@ -221,10 +340,12 @@ def clean_dataframe(
     # Remove Rows Without OHLC Data
     # ------------------------------------------------------
 
-    if len(ohlc_columns) >= 4:
+    if len(ohlc_columns) > 0:
 
         df = df[
-            df[ohlc_columns].notna().any(axis=1)
+            df[ohlc_columns]
+            .notna()
+            .any(axis=1)
         ].copy()
 
     return df
@@ -322,10 +443,12 @@ def report_max_since_buy(
     report = []
 
     # ------------------------------------------------------
-    # Check Folder
+    # Validate Folder
     # ------------------------------------------------------
 
-    if not os.path.exists(folder_path):
+    if not os.path.exists(
+        folder_path
+    ):
 
         raise FileNotFoundError(
             f"Folder not found: {folder_path}"
@@ -335,7 +458,9 @@ def report_max_since_buy(
     # Process XLSX Files
     # ------------------------------------------------------
 
-    for file in os.listdir(folder_path):
+    for file in os.listdir(
+        folder_path
+    ):
 
         if not file.lower().endswith(
             ".xlsx"
@@ -343,9 +468,10 @@ def report_max_since_buy(
             continue
 
         # Ignore temporary Excel files
-        # such as ~$filename.xlsx
 
-        if file.startswith("~$"):
+        if file.startswith(
+            "~$"
+        ):
             continue
 
         stock = get_stock_name(
@@ -353,7 +479,7 @@ def report_max_since_buy(
         )
 
         # --------------------------------------------------
-        # Process only stocks available in buy-date file
+        # Skip stocks not present in buy-date file
         # --------------------------------------------------
 
         if stock not in buy_dates:
@@ -382,7 +508,9 @@ def report_max_since_buy(
 
                 continue
 
-            buy_date = buy_dates[stock]
+            buy_date = buy_dates[
+                stock
+            ]
 
             overall_max = get_overall_max(
                 df
@@ -439,7 +567,7 @@ def report_max_since_buy(
             print(e)
 
     # ------------------------------------------------------
-    # No Report Data
+    # No Data
     # ------------------------------------------------------
 
     if not report:
@@ -447,7 +575,7 @@ def report_max_since_buy(
         return pd.DataFrame()
 
     # ------------------------------------------------------
-    # Create Report DataFrame
+    # Create Report
     # ------------------------------------------------------
 
     report_df = pd.DataFrame(
@@ -455,7 +583,7 @@ def report_max_since_buy(
     )
 
     # ------------------------------------------------------
-    # Sort Report
+    # Sort By Stock
     # ------------------------------------------------------
 
     report_df = (
@@ -480,7 +608,10 @@ def print_report(
     report_name
 ):
 
-    if df is None or df.empty:
+    if (
+        df is None
+        or df.empty
+    ):
 
         print()
         print(
