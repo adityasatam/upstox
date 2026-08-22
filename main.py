@@ -10,7 +10,7 @@
 # Difference
 #
 # Future Reports
-# ----------------------------------------------------------
+# ------------------------------
 # Report 2 : Minimum Price
 # Report 3 : CAGR
 # Report 4 : Drawdown
@@ -22,8 +22,6 @@
 # ----------------------------------------------------------
 # 08-08-2026 Initial Version
 # 08-08-2026 Added First Buy Date Report
-# 22-08-2026 Fixed date parsing warnings
-# 22-08-2026 Added robust Upstox date handling
 ##############################################################
 
 
@@ -35,40 +33,17 @@ import pandas as pd
 # DISPLAY SETTINGS
 # ==========================================================
 
-pd.set_option(
-    "display.max_rows",
-    None
-)
-
-pd.set_option(
-    "display.max_columns",
-    None
-)
-
-pd.set_option(
-    "display.width",
-    None
-)
-
-pd.set_option(
-    "display.max_colwidth",
-    None
-)
-
-pd.set_option(
-    "display.expand_frame_repr",
-    False
-)
+pd.set_option("display.max_rows", None)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", None)
+pd.set_option("display.max_colwidth", None)
 
 
 # ==========================================================
 # READ BUY DATE FILE
 # ==========================================================
 
-def read_buy_dates(
-    folder_path,
-    buy_date_file
-):
+def read_buy_dates(folder_path, buy_date_file):
 
     file_path = os.path.join(
         folder_path,
@@ -83,10 +58,7 @@ def read_buy_dates(
 
     buy_dates = {}
 
-    with open(
-        file_path,
-        "r"
-    ) as f:
+    with open(file_path, "r") as f:
 
         for line in f:
 
@@ -101,24 +73,23 @@ def read_buy_dates(
                 continue
 
             stock = parts[0].strip()
-            date_string = parts[1].strip()
+            buy_date_text = parts[1].strip()
 
-            buy_date = pd.to_datetime(
-                date_string,
-                format="%d-%m-%Y",
-                errors="coerce"
-            )
+            try:
 
-            if pd.isna(buy_date):
-
-                print(
-                    f"Invalid buy date for "
-                    f"{stock}: {date_string}"
+                buy_date = pd.to_datetime(
+                    buy_date_text,
+                    format="%d-%m-%Y"
                 )
 
-                continue
+                buy_dates[stock] = buy_date
 
-            buy_dates[stock] = buy_date
+            except ValueError:
+
+                print(
+                    f"Invalid buy date for {stock}: "
+                    f"{buy_date_text}"
+                )
 
     return buy_dates
 
@@ -127,181 +98,46 @@ def read_buy_dates(
 # GET STOCK NAME
 # ==========================================================
 
-def get_stock_name(
-    file_name
-):
+def get_stock_name(file_name):
 
-    return file_name.split("-")[0].strip()
+    return file_name.split("-")[0]
 
 
 # ==========================================================
 # READ STOCK FILE
 # ==========================================================
 
-def read_stock_file(
-    file_path
-):
+def read_stock_file(file_path):
 
-    return pd.read_excel(
+    df = pd.read_excel(
         file_path,
         engine="openpyxl"
     )
 
-
-# ==========================================================
-# PARSE UPSTOX DATE
-# ==========================================================
-
-def parse_upstox_dates(
-    series
-):
-
-    # ------------------------------------------------------
-    # Case 1:
-    # Already datetime
-    # ------------------------------------------------------
-
-    if pd.api.types.is_datetime64_any_dtype(
-        series
-    ):
-
-        return series
-
-    # ------------------------------------------------------
-    # Case 2:
-    # Numeric Excel serial dates
-    # ------------------------------------------------------
-
-    if pd.api.types.is_numeric_dtype(
-        series
-    ):
-
-        return pd.to_datetime(
-            series,
-            unit="D",
-            origin="1899-12-30",
-            errors="coerce"
-        )
-
-    # ------------------------------------------------------
-    # Case 3:
-    # String dates
-    #
-    # Try known formats explicitly.
-    # This avoids Pandas format inference warnings.
-    # ------------------------------------------------------
-
-    result = pd.Series(
-        pd.NaT,
-        index=series.index,
-        dtype="datetime64[ns]"
-    )
-
-    date_strings = (
-        series
-        .astype(str)
-        .str.strip()
-    )
-
-    # ------------------------------------------------------
-    # DD-MM-YYYY
-    # ------------------------------------------------------
-
-    mask = result.isna()
-
-    result.loc[mask] = pd.to_datetime(
-        date_strings.loc[mask],
-        format="%d-%m-%Y",
-        errors="coerce"
-    )
-
-    # ------------------------------------------------------
-    # DD/MM/YYYY
-    # ------------------------------------------------------
-
-    mask = result.isna()
-
-    result.loc[mask] = pd.to_datetime(
-        date_strings.loc[mask],
-        format="%d/%m/%Y",
-        errors="coerce"
-    )
-
-    # ------------------------------------------------------
-    # YYYY-MM-DD
-    # ------------------------------------------------------
-
-    mask = result.isna()
-
-    result.loc[mask] = pd.to_datetime(
-        date_strings.loc[mask],
-        format="%Y-%m-%d",
-        errors="coerce"
-    )
-
-    # ------------------------------------------------------
-    # YYYY-MM-DD HH:MM:SS
-    # ------------------------------------------------------
-
-    mask = result.isna()
-
-    result.loc[mask] = pd.to_datetime(
-        date_strings.loc[mask],
-        format="%Y-%m-%d %H:%M:%S",
-        errors="coerce"
-    )
-
-    # ------------------------------------------------------
-    # DD-MM-YYYY HH:MM:SS
-    # ------------------------------------------------------
-
-    mask = result.isna()
-
-    result.loc[mask] = pd.to_datetime(
-        date_strings.loc[mask],
-        format="%d-%m-%Y %H:%M:%S",
-        errors="coerce"
-    )
-
-    # ------------------------------------------------------
-    # DD/MM/YYYY HH:MM:SS
-    # ------------------------------------------------------
-
-    mask = result.isna()
-
-    result.loc[mask] = pd.to_datetime(
-        date_strings.loc[mask],
-        format="%d/%m/%Y %H:%M:%S",
-        errors="coerce"
-    )
-
-    return result
+    return df
 
 
 # ==========================================================
 # CLEAN DATAFRAME
 # ==========================================================
 
-def clean_dataframe(
-    df
-):
+def clean_dataframe(df):
 
     # ------------------------------------------------------
-    # Validate DataFrame
-    # ------------------------------------------------------
-
-    if df is None or df.empty:
-
-        return pd.DataFrame()
-
-    # ------------------------------------------------------
-    # Date Column
+    # First column is Date
     # ------------------------------------------------------
 
     date_column = df.columns[0]
 
-    df[date_column] = parse_upstox_dates(
-        df[date_column]
+    # Upstox Historical OHLC files contain dates in
+    # DD-MM-YYYY format.
+    #
+    # Explicit format avoids Pandas date inference warning.
+
+    df[date_column] = pd.to_datetime(
+        df[date_column],
+        format="%d-%m-%Y",
+        errors="coerce"
     )
 
     # ------------------------------------------------------
@@ -315,11 +151,7 @@ def clean_dataframe(
         df[column] = (
             df[column]
             .astype(str)
-            .str.replace(
-                ",",
-                "",
-                regex=False
-            )
+            .str.replace(",", "", regex=False)
             .str.strip()
         )
 
@@ -329,53 +161,29 @@ def clean_dataframe(
         )
 
     # ------------------------------------------------------
-    # Remove Invalid Date Rows
+    # Remove rows where date is invalid
     # ------------------------------------------------------
 
-    df = df[
-        df[date_column].notna()
-    ].copy()
-
-    # ------------------------------------------------------
-    # Remove Rows Without OHLC Data
-    # ------------------------------------------------------
-
-    if len(ohlc_columns) > 0:
-
-        df = df[
-            df[ohlc_columns]
-            .notna()
-            .any(axis=1)
-        ].copy()
+    df = df.dropna(
+        subset=[date_column]
+    ).copy()
 
     return df
 
 
 # ==========================================================
-# GET OVERALL MAXIMUM HIGH
+# GET MAXIMUM HIGH
 # ==========================================================
 
-def get_overall_max(
-    df
-):
+def get_overall_max(df):
 
     high_column = df.columns[2]
 
-    if df.empty:
-
-        return None
-
-    max_high = df[high_column].max()
-
-    if pd.isna(max_high):
-
-        return None
-
-    return max_high
+    return df[high_column].max()
 
 
 # ==========================================================
-# GET MAXIMUM HIGH AFTER FIRST BUY DATE
+# GET MAXIMUM HIGH AFTER BUY DATE
 # ==========================================================
 
 def get_max_since_buy(
@@ -394,17 +202,11 @@ def get_max_since_buy(
 
         return None
 
-    max_high = filtered_df[high_column].max()
-
-    if pd.isna(max_high):
-
-        return None
-
-    return max_high
+    return filtered_df[high_column].max()
 
 
 # ==========================================================
-# CALCULATE DIFFERENCE
+# DIFFERENCE
 # ==========================================================
 
 def calculate_difference(
@@ -412,10 +214,7 @@ def calculate_difference(
     max_since_buy
 ):
 
-    if (
-        overall_max is None
-        or max_since_buy is None
-    ):
+    if pd.isna(max_since_buy):
 
         return None
 
@@ -442,45 +241,12 @@ def report_max_since_buy(
 
     report = []
 
-    # ------------------------------------------------------
-    # Validate Folder
-    # ------------------------------------------------------
+    for file in os.listdir(folder_path):
 
-    if not os.path.exists(
-        folder_path
-    ):
-
-        raise FileNotFoundError(
-            f"Folder not found: {folder_path}"
-        )
-
-    # ------------------------------------------------------
-    # Process XLSX Files
-    # ------------------------------------------------------
-
-    for file in os.listdir(
-        folder_path
-    ):
-
-        if not file.lower().endswith(
-            ".xlsx"
-        ):
+        if not file.lower().endswith(".xlsx"):
             continue
 
-        # Ignore temporary Excel files
-
-        if file.startswith(
-            "~$"
-        ):
-            continue
-
-        stock = get_stock_name(
-            file
-        )
-
-        # --------------------------------------------------
-        # Skip stocks not present in buy-date file
-        # --------------------------------------------------
+        stock = get_stock_name(file)
 
         if stock not in buy_dates:
             continue
@@ -492,44 +258,61 @@ def report_max_since_buy(
                 file
             )
 
+            # --------------------------------------------------
+            # Read file
+            # --------------------------------------------------
+
             df = read_stock_file(
                 file_path
             )
+
+            # --------------------------------------------------
+            # Clean file
+            # --------------------------------------------------
 
             df = clean_dataframe(
                 df
             )
 
-            if df.empty:
+            # --------------------------------------------------
+            # Buy date
+            # --------------------------------------------------
 
-                print(
-                    f"No valid data found for {stock}"
-                )
+            buy_date = buy_dates[stock]
 
-                continue
-
-            buy_date = buy_dates[
-                stock
-            ]
+            # --------------------------------------------------
+            # Overall maximum
+            # --------------------------------------------------
 
             overall_max = get_overall_max(
                 df
             )
+
+            # --------------------------------------------------
+            # Maximum after first buy
+            # --------------------------------------------------
 
             max_since_buy = get_max_since_buy(
                 df,
                 buy_date
             )
 
+            # --------------------------------------------------
+            # Difference
+            # --------------------------------------------------
+
             difference = calculate_difference(
                 overall_max,
                 max_since_buy
             )
 
+            # --------------------------------------------------
+            # Add report row
+            # --------------------------------------------------
+
             report.append({
 
-                "Stock":
-                    stock,
+                "Stock": stock,
 
                 "First Buy Date":
                     buy_date.strftime(
@@ -538,28 +321,24 @@ def report_max_since_buy(
 
                 "Max Since First Bought":
                     None
-                    if max_since_buy is None
+                    if pd.isna(max_since_buy)
                     else round(
                         max_since_buy,
                         2
                     ),
 
                 "Overall Max":
-                    None
-                    if overall_max is None
-                    else round(
+                    round(
                         overall_max,
                         2
                     ),
 
                 "Difference":
                     difference
-
             })
 
         except Exception as e:
 
-            print()
             print(
                 f"Error processing {stock}"
             )
@@ -567,23 +346,19 @@ def report_max_since_buy(
             print(e)
 
     # ------------------------------------------------------
-    # No Data
-    # ------------------------------------------------------
-
-    if not report:
-
-        return pd.DataFrame()
-
-    # ------------------------------------------------------
-    # Create Report
+    # Create report
     # ------------------------------------------------------
 
     report_df = pd.DataFrame(
         report
     )
 
+    if report_df.empty:
+
+        return report_df
+
     # ------------------------------------------------------
-    # Sort By Stock
+    # Sort by Stock
     # ------------------------------------------------------
 
     report_df = (
@@ -608,19 +383,15 @@ def print_report(
     report_name
 ):
 
-    if (
-        df is None
-        or df.empty
-    ):
+    print()
 
-        print()
+    if df is None or df.empty:
+
         print(
             f"{report_name}: No data found."
         )
 
         return
-
-    print()
 
     print(
         "=" * 25,
@@ -648,8 +419,9 @@ def report_min_price(
 ):
 
     """
-    Future Report:
-    Minimum price after first buy date.
+    Future Report
+
+    Minimum price after buying.
     """
 
     pass
@@ -666,7 +438,8 @@ def report_cagr(
 ):
 
     """
-    Future Report:
+    Future Report
+
     CAGR calculation.
     """
 
@@ -684,7 +457,8 @@ def report_drawdown(
 ):
 
     """
-    Future Report:
+    Future Report
+
     Maximum drawdown.
     """
 
@@ -702,8 +476,9 @@ def report_volatility(
 ):
 
     """
-    Future Report:
-    Stock price volatility.
+    Future Report
+
+    Volatility calculation.
     """
 
     pass
@@ -748,7 +523,7 @@ def main(
     #     report_2,
     #     "MINIMUM PRICE REPORT"
     # )
-
+    #
 
     #
     # report_3 = report_cagr(
@@ -760,7 +535,7 @@ def main(
     #     report_3,
     #     "CAGR REPORT"
     # )
-
+    #
 
     #
     # report_4 = report_drawdown(
@@ -772,7 +547,7 @@ def main(
     #     report_4,
     #     "DRAWDOWN REPORT"
     # )
-
+    #
 
     #
     # report_5 = report_volatility(
