@@ -1,22 +1,42 @@
-##############################################################
-# INSTALL REQUIRED PACKAGES
-##############################################################
-
 import sys
 import subprocess
 import tempfile
 import requests
 
-requirements_url = (
+
+# ======================================================
+# USER CONFIGURATION
+#
+# Modify ONLY the below parameters.
+# ======================================================
+
+FOLDER_PATH = r"C:/Users/sasuk/my_projects/upstox_sell_alert/upstox_files/"
+
+BUY_DATE_FILE = "first_buy_date.txt"
+
+
+# ======================================================
+# GITHUB CONFIGURATION
+# ======================================================
+
+GITHUB_RAW_BASE = (
     "https://raw.githubusercontent.com/"
-    "adityasatam/upstox/"
-    "refs/heads/main/requirements.txt"
+    "adityasatam/upstox_sell_alert/main/"
 )
+
+REQUIREMENTS_URL = GITHUB_RAW_BASE + "requirements.txt"
+
+MAIN_URL = GITHUB_RAW_BASE + "main.py"
+
+
+# ======================================================
+# DOWNLOAD AND INSTALL REQUIRED PACKAGES
+# ======================================================
 
 try:
 
     response = requests.get(
-        requirements_url,
+        REQUIREMENTS_URL,
         timeout=30
     )
 
@@ -37,68 +57,67 @@ try:
         "-m",
         "pip",
         "install",
+        "--quiet",
+        "--disable-pip-version-check",
         "-r",
         temp_requirements
     ])
 
 except Exception as e:
 
-    print(f"Failed to install requirements : {e}")
+    print("\nFailed to install requirements.")
+    print(e)
 
     sys.exit(1)
 
 
-##############################################################
-# HOW TO USE
-##############################################################
+# ======================================================
+# DOWNLOAD LATEST main.py FROM GITHUB
+# ======================================================
 
-# 1. Download all historical Upstox (.xlsx) files.
-#
-# 2. Keep all files inside ONE folder.
-#
-# 3. Create first_buy_date.txt inside the same folder.
-#
-#    Example:
-#
-#    ADANIENT|11-07-2024
-#    RELIANCE|20-01-2022
-#    TCS|15-03-2020
-#
-# 4. Copy this run.py anywhere.
-#
-# 5. Change ONLY the folder_path below.
-#
-# 6. Run:
-#
-#       python run.py
-#
-##############################################################
+try:
 
-
-##############################################################
-# DOWNLOAD & EXECUTE main.py FROM GITHUB
-##############################################################
-
-main_url = (
-    "https://raw.githubusercontent.com/"
-    "adityasatam/upstox/"
-    "refs/heads/main/main.py"
-)
-
-response = requests.get(main_url)
-
-if response.status_code == 200:
-
-    exec(response.text)
-
-    main(
-
-        folder_path=r"C:\Users\sasuk\upstox\upstox_files",
-
-        buy_date_file="first_buy_date.txt"
-
+    response = requests.get(
+        MAIN_URL,
+        timeout=30
     )
 
-else:
+    response.raise_for_status()
 
-    print("Failed to download main.py from GitHub.")
+    main_code = response.text
+
+except Exception as e:
+
+    print("\nUnable to download main.py.")
+    print(e)
+
+    sys.exit(1)
+
+
+# ======================================================
+# EXECUTE main.py
+# ======================================================
+
+try:
+
+    exec(
+        main_code,
+        globals()
+    )
+
+except Exception as e:
+
+    print("\nFailed to load main.py.")
+    print(e)
+
+    sys.exit(1)
+
+
+# ======================================================
+# RUN
+# ======================================================
+
+main(
+    folder_path=FOLDER_PATH,
+    buy_date_file=BUY_DATE_FILE
+)
