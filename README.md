@@ -1,4 +1,4 @@
-# Upstox Stock Summary
+# Upstox Sell Price Alert
 
 Reads multiple **Upstox Historical OHLC `.xlsx` files** and generates a consolidated stock-wise price summary.
 
