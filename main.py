@@ -24,7 +24,6 @@
 # 08-08-2026 Added First Buy Date Report
 ##############################################################
 
-
 import os
 import pandas as pd
 
@@ -129,14 +128,16 @@ def clean_dataframe(df):
 
     date_column = df.columns[0]
 
-    # Upstox Historical OHLC files contain dates in
-    # DD-MM-YYYY format.
+    # Use format="mixed" instead of forcing a single
+    # date format.
     #
-    # Explicit format avoids Pandas date inference warning.
-
+    # This preserves the original dayfirst=True behavior
+    # while avoiding Pandas format inference warnings.
+    #
     df[date_column] = pd.to_datetime(
         df[date_column],
-        format="%d-%m-%Y",
+        format="mixed",
+        dayfirst=True,
         errors="coerce"
     )
 
@@ -151,7 +152,11 @@ def clean_dataframe(df):
         df[column] = (
             df[column]
             .astype(str)
-            .str.replace(",", "", regex=False)
+            .str.replace(
+                ",",
+                "",
+                regex=False
+            )
             .str.strip()
         )
 
@@ -159,14 +164,6 @@ def clean_dataframe(df):
             df[column],
             errors="coerce"
         )
-
-    # ------------------------------------------------------
-    # Remove rows where date is invalid
-    # ------------------------------------------------------
-
-    df = df.dropna(
-        subset=[date_column]
-    ).copy()
 
     return df
 
@@ -225,8 +222,7 @@ def calculate_difference(
 
 
 # ==========================================================
-# REPORT 1
-# MAXIMUM HIGH SINCE FIRST BUY
+# REPORT
 # ==========================================================
 
 def report_max_since_buy(
@@ -243,10 +239,18 @@ def report_max_since_buy(
 
     for file in os.listdir(folder_path):
 
+        # --------------------------------------------------
+        # Process only XLSX files
+        # --------------------------------------------------
+
         if not file.lower().endswith(".xlsx"):
             continue
 
         stock = get_stock_name(file)
+
+        # --------------------------------------------------
+        # Skip stocks without first buy date
+        # --------------------------------------------------
 
         if stock not in buy_dates:
             continue
@@ -259,7 +263,7 @@ def report_max_since_buy(
             )
 
             # --------------------------------------------------
-            # Read file
+            # Read stock file
             # --------------------------------------------------
 
             df = read_stock_file(
@@ -267,7 +271,7 @@ def report_max_since_buy(
             )
 
             # --------------------------------------------------
-            # Clean file
+            # Clean dataframe
             # --------------------------------------------------
 
             df = clean_dataframe(
@@ -275,13 +279,13 @@ def report_max_since_buy(
             )
 
             # --------------------------------------------------
-            # Buy date
+            # First Buy Date
             # --------------------------------------------------
 
             buy_date = buy_dates[stock]
 
             # --------------------------------------------------
-            # Overall maximum
+            # Overall Maximum High
             # --------------------------------------------------
 
             overall_max = get_overall_max(
@@ -289,7 +293,7 @@ def report_max_since_buy(
             )
 
             # --------------------------------------------------
-            # Maximum after first buy
+            # Maximum High Since First Buy
             # --------------------------------------------------
 
             max_since_buy = get_max_since_buy(
@@ -307,12 +311,13 @@ def report_max_since_buy(
             )
 
             # --------------------------------------------------
-            # Add report row
+            # Add result
             # --------------------------------------------------
 
             report.append({
 
-                "Stock": stock,
+                "Stock":
+                    stock,
 
                 "First Buy Date":
                     buy_date.strftime(
@@ -346,7 +351,7 @@ def report_max_since_buy(
             print(e)
 
     # ------------------------------------------------------
-    # Create report
+    # Create report dataframe
     # ------------------------------------------------------
 
     report_df = pd.DataFrame(
@@ -383,29 +388,31 @@ def print_report(
     report_name
 ):
 
-    print()
+    if df is not None and not df.empty:
 
-    if df is None or df.empty:
+        print()
+
+        print(
+            "=" * 25,
+            report_name,
+            "=" * 25
+        )
+
+        print()
+
+        print(
+            df.to_string(
+                index=False
+            )
+        )
+
+    else:
+
+        print()
 
         print(
             f"{report_name}: No data found."
         )
-
-        return
-
-    print(
-        "=" * 25,
-        report_name,
-        "=" * 25
-    )
-
-    print()
-
-    print(
-        df.to_string(
-            index=False
-        )
-    )
 
 
 # ==========================================================
