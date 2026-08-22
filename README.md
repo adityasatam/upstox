@@ -1,144 +1,93 @@
-# Upstox Stock Summary
+Upstox Stock Summary
 
-Python utility to analyze multiple **Upstox Historical OHLC (.xlsx)** files and generate stock-wise price summaries.
+Reads multiple Upstox Historical OHLC .xlsx files and generates a consolidated stock-wise price summary.
 
----
+🚀 Problem This Solves
 
-## Features
+Analyzing historical OHLC data for multiple stocks manually can be time-consuming, especially when each stock is downloaded as a separate Upstox file.
 
-- Reads all `.xlsx` files from a folder.
-- Automatically extracts the **stock name** from the filename.
-- Calculates:
-  - Maximum Open Price
-  - Maximum High Price
-  - Maximum Low Price
-  - Maximum Close Price
-- Displays a consolidated report.
-- Automatically installs required Python packages.
-- Always executes the latest `main.py` directly from GitHub.
+This code automatically reads all Upstox files from a folder, identifies the stock from the filename, and generates a consolidated summary.
 
----
+⚙️ How It Works
 
-## Folder Structure
+Reads all .xlsx files from the configured folder.
 
-```
-upstox_stock_summary/
-│
-├── main.py
-├── run.py
-├── requirements.txt
-└── README.md
-```
+The stock name is automatically extracted from each filename.
 
----
+For every stock, the program calculates the maximum:
 
-## Input
+Open Price
+High Price
+Low Price
+Close Price
 
-Place all Upstox Historical Data files in one folder.
+All stocks are then combined into a single consolidated report.
+
+📥 Input
+Upstox Historical OHLC Files
+
+Place the downloaded Upstox .xlsx files in a folder and provide the folder path in run.py.
 
 Example:
 
-```
+folder_path = r"C:\Users\YourName\Downloads\Upstox"
+
+Example files:
+
 ADANIENSOL-OHLC-1W-Data-12Feb2018(5.30AM)-3Aug2026(5.30AM).xlsx
 
 RELIANCE-OHLC-1W-Data-01Jan2018-03Aug2026.xlsx
 
 SBIN-OHLC-1W-Data-01Jan2018-03Aug2026.xlsx
-```
 
-The stock name is automatically extracted as:
+The stock names are automatically extracted as:
 
-```
 ADANIENSOL
 RELIANCE
 SBIN
-```
+🐦 Main
+main(
+    folder_path=folder_path
+)
+Parameters
+1. folder_path
 
----
+Type: str
 
-## Output
+Folder containing the Upstox Historical OHLC .xlsx files.
 
-Example
+Example:
 
-```
+folder_path = r"C:\Users\YourName\Downloads\Upstox"
+
+All .xlsx files in this folder are processed automatically.
+
+📤 Output
+
+The program generates a consolidated Maximum OHLC Summary.
+
+Example:
+
 =============== MAXIMUM OHLC SUMMARY ===============
 
         Stock   Max_Open  Max_High  Max_Low  Max_Close
 
  ADANIENSOL     1385.50   1450.00   1340.20    1438.40
  RELIANCE       3520.30   3589.40   3478.10    3565.80
- SBIN            988.40   1006.80    945.00     999.30
-```
+ SBIN             988.40   1006.80    945.00     999.30
 
----
+For each stock, the report contains:
 
-## Installation
-
+Maximum Open Price
+Maximum High Price
+Maximum Low Price
+Maximum Close Price
+📌 Important Notes
+Only .xlsx files are processed.
+All .xlsx files in the configured folder are analyzed.
+Stock names are automatically extracted from the filenames.
+Multiple stocks can be analyzed in a single execution.
+run.py automatically downloads and installs the required packages.
+run.py always downloads and executes the latest main.py directly from GitHub.
+Internet access is required to download the latest code and dependencies.
 Python 3.10 or later is recommended.
-
-No manual package installation is required.
-
-`run.py` automatically downloads and installs all required dependencies.
-
----
-
-## How to Run
-
-Open `run.py`.
-
-Modify only:
-
-```python
-main(
-    folder_path=r"C:\Users\YourName\Downloads\Upstox"
-)
-```
-
-Then execute:
-
-```
-python run.py
-```
-
----
-
-## Reports
-
-Current Reports
-
-- Maximum OHLC Summary
-
-Future Reports
-
-- Minimum OHLC Summary
-- Average OHLC Summary
-- 52 Week High
-- 52 Week Low
-- CAGR
-- Volatility
-- Drawdown
-- Returns
-- ATH Analysis
-
----
-
-## Requirements
-
-Automatically installed.
-
-```
-pandas
-openpyxl
-```
-
----
-
-## Author
-
-Aditya Satam
-
----
-
-## License
-
-MIT License
