@@ -1,35 +1,46 @@
-# Upstox Sell Alert
+# upstox_sell_alert
 
-Reads multiple **Upstox Historical OHLC `.xlsx` files** and generates a consolidated stock-wise price summary.
+Analyzes multiple **Upstox Historical OHLC `.xlsx` files** and identifies the **maximum High price since the first buy date**, along with the overall historical maximum.
 
 # 🚀 Problem This Solves
 
-Analyzing historical OHLC data for multiple stocks manually can be time-consuming, especially when each stock is downloaded as a separate Upstox file.
+When holding multiple stocks, manually checking whether a stock has reached its historical high after the first purchase can be time-consuming.
 
-This code automatically reads all Upstox files from a folder, identifies the stock from the filename, and generates a consolidated summary.
+This utility automatically compares each stock's:
+
+- Maximum High since the first buy date
+- Overall historical Maximum High
+- Difference between the two
+
+and generates a consolidated report.
 
 # ⚙️ How It Works
 
-Reads all `.xlsx` files from the configured folder.
+Reads all Upstox Historical OHLC `.xlsx` files from a configured folder.
 
-The stock name is automatically extracted from each filename.
+The stock name is automatically extracted from the filename.
 
-For every stock, the program calculates the maximum:
+The first purchase date for each stock is read from `first_buy_date.txt`.
 
-- Open Price
-- High Price
-- Low Price
-- Close Price
+For every stock, the program calculates:
 
-All stocks are then combined into a single consolidated report.
+- **Maximum High Since First Buy** — Highest High price recorded on or after the first buy date.
+- **Overall Maximum High** — Highest High price available in the complete historical data.
+- **Difference** — Difference between the overall historical maximum and the maximum reached since the first purchase.
 
 # 📥 Input
 
 ## Upstox Historical OHLC Files
 
-Place the downloaded Upstox `.xlsx` files in a folder and provide the folder path in `run.py`.
+Place all downloaded Upstox `.xlsx` files in one folder.
 
 Example:
 
-```python
-folder_path = r"C:\Users\YourName\Downloads\Upstox"
+```text
+upstox_files/
+│
+├── ADANIENSOL-OHLC-1W-Data.xlsx
+├── ADANIENT-OHLC-1W-Data.xlsx
+├── ADANIGREEN-OHLC-1W-Data.xlsx
+├── RELIANCE-OHLC-1W-Data.xlsx
+└── TCS-OHLC-1W-Data.xlsx
