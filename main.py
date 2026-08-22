@@ -10,7 +10,7 @@
 # Difference
 #
 # Future Reports
-# ------------------------------
+# ----------------------------------------------------------
 # Report 2 : Minimum Price
 # Report 3 : CAGR
 # Report 4 : Drawdown
@@ -22,6 +22,7 @@
 # ----------------------------------------------------------
 # 08-08-2026 Initial Version
 # 08-08-2026 Added First Buy Date Report
+# 22-08-2026 Fixed date parsing warnings
 ##############################################################
 
 
@@ -33,35 +34,17 @@ import pandas as pd
 # DISPLAY SETTINGS
 # ==========================================================
 
-pd.set_option(
-    "display.max_rows",
-    None
-)
-
-pd.set_option(
-    "display.max_columns",
-    None
-)
-
-pd.set_option(
-    "display.width",
-    None
-)
-
-pd.set_option(
-    "display.max_colwidth",
-    None
-)
+pd.set_option("display.max_rows", None)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", None)
+pd.set_option("display.max_colwidth", None)
 
 
 # ==========================================================
 # READ BUY DATE FILE
 # ==========================================================
 
-def read_buy_dates(
-    folder_path,
-    buy_date_file
-):
+def read_buy_dates(folder_path, buy_date_file):
 
     file_path = os.path.join(
         folder_path,
@@ -76,11 +59,7 @@ def read_buy_dates(
 
     buy_dates = {}
 
-    with open(
-        file_path,
-        "r",
-        encoding="utf-8"
-    ) as f:
+    with open(file_path, "r") as f:
 
         for line in f:
 
@@ -98,8 +77,16 @@ def read_buy_dates(
 
             buy_date = pd.to_datetime(
                 parts[1].strip(),
-                format="%d-%m-%Y"
+                format="%d-%m-%Y",
+                errors="coerce"
             )
+
+            if pd.isna(buy_date):
+                print(
+                    f"Invalid buy date for {stock}: "
+                    f"{parts[1].strip()}"
+                )
+                continue
 
             buy_dates[stock] = buy_date
 
@@ -110,9 +97,7 @@ def read_buy_dates(
 # GET STOCK NAME
 # ==========================================================
 
-def get_stock_name(
-    file_name
-):
+def get_stock_name(file_name):
 
     return file_name.split("-")[0]
 
@@ -121,9 +106,7 @@ def get_stock_name(
 # READ STOCK FILE
 # ==========================================================
 
-def read_stock_file(
-    file_path
-):
+def read_stock_file(file_path):
 
     df = pd.read_excel(
         file_path,
@@ -137,9 +120,7 @@ def read_stock_file(
 # CLEAN DATAFRAME
 # ==========================================================
 
-def clean_dataframe(
-    df
-):
+def clean_dataframe(df):
 
     # ------------------------------------------------------
     # Date Column
@@ -147,10 +128,11 @@ def clean_dataframe(
 
     date_column = df.columns[0]
 
+    # Upstox dates are in DD-MM-YYYY format.
+    # Explicit format avoids Pandas date inference warnings.
     df[date_column] = pd.to_datetime(
         df[date_column],
-        format="mixed",
-        dayfirst=True,
+        format="%d-%m-%Y",
         errors="coerce"
     )
 
@@ -165,11 +147,7 @@ def clean_dataframe(
         df[column] = (
             df[column]
             .astype(str)
-            .str.replace(
-                ",",
-                "",
-                regex=False
-            )
+            .str.replace(",", "", regex=False)
             .str.strip()
         )
 
@@ -179,7 +157,7 @@ def clean_dataframe(
         )
 
     # ------------------------------------------------------
-    # Remove Invalid Date Rows
+    # Remove rows with invalid dates
     # ------------------------------------------------------
 
     df = df[
@@ -193,9 +171,7 @@ def clean_dataframe(
 # GET OVERALL MAXIMUM HIGH
 # ==========================================================
 
-def get_overall_max(
-    df
-):
+def get_overall_max(df):
 
     high_column = df.columns[2]
 
@@ -203,7 +179,7 @@ def get_overall_max(
 
 
 # ==========================================================
-# GET MAXIMUM HIGH AFTER BUY DATE
+# GET MAXIMUM HIGH AFTER FIRST BUY DATE
 # ==========================================================
 
 def get_max_since_buy(
@@ -212,7 +188,6 @@ def get_max_since_buy(
 ):
 
     date_column = df.columns[0]
-
     high_column = df.columns[2]
 
     filtered_df = df[
@@ -264,14 +239,10 @@ def report_max_since_buy(
 
     for file in os.listdir(folder_path):
 
-        if not file.lower().endswith(
-            ".xlsx"
-        ):
+        if not file.lower().endswith(".xlsx"):
             continue
 
-        stock = get_stock_name(
-            file
-        )
+        stock = get_stock_name(file)
 
         if stock not in buy_dates:
             continue
@@ -290,6 +261,9 @@ def report_max_since_buy(
             df = clean_dataframe(
                 df
             )
+
+            if df.empty:
+                continue
 
             buy_date = buy_dates[stock]
 
@@ -319,38 +293,47 @@ def report_max_since_buy(
 
                 "Max Since First Bought":
                     None
-                    if pd.isna(
-                        max_since_buy
-                    )
+                    if pd.isna(max_since_buy)
                     else round(
                         max_since_buy,
                         2
                     ),
 
                 "Overall Max":
-                    round(
+                    None
+                    if pd.isna(overall_max)
+                    else round(
                         overall_max,
                         2
                     ),
 
                 "Difference":
                     difference
-
             })
 
         except Exception as e:
 
             print(
-                f"Error processing {stock}: {e}"
+                f"\nError processing {stock}"
             )
+
+            print(e)
+
+    # ------------------------------------------------------
+    # Create DataFrame
+    # ------------------------------------------------------
+
+    if not report:
+
+        return pd.DataFrame()
 
     report_df = pd.DataFrame(
         report
     )
 
-    if report_df.empty:
-
-        return report_df
+    # ------------------------------------------------------
+    # Sort Report
+    # ------------------------------------------------------
 
     report_df = (
         report_df
@@ -374,6 +357,15 @@ def print_report(
     report_name
 ):
 
+    if df is None or df.empty:
+
+        print()
+        print(
+            f"{report_name}: No data found."
+        )
+
+        return
+
     print()
 
     print(
@@ -383,14 +375,6 @@ def print_report(
     )
 
     print()
-
-    if df is None or df.empty:
-
-        print(
-            "No data found."
-        )
-
-        return
 
     print(
         df.to_string(
@@ -411,7 +395,7 @@ def report_min_price(
 
     """
     Future Report:
-    Minimum price after buying.
+    Minimum price after first buy date.
     """
 
     pass
@@ -465,7 +449,7 @@ def report_volatility(
 
     """
     Future Report:
-    Volatility calculation.
+    Stock price volatility.
     """
 
     pass
@@ -500,6 +484,7 @@ def main(
     # Uncomment whenever implemented
     # ------------------------------------------------------
 
+    #
     # report_2 = report_min_price(
     #     folder_path,
     #     buy_date_file
@@ -510,6 +495,8 @@ def main(
     #     "MINIMUM PRICE REPORT"
     # )
 
+
+    #
     # report_3 = report_cagr(
     #     folder_path,
     #     buy_date_file
@@ -520,6 +507,8 @@ def main(
     #     "CAGR REPORT"
     # )
 
+
+    #
     # report_4 = report_drawdown(
     #     folder_path,
     #     buy_date_file
@@ -530,6 +519,8 @@ def main(
     #     "DRAWDOWN REPORT"
     # )
 
+
+    #
     # report_5 = report_volatility(
     #     folder_path,
     #     buy_date_file
